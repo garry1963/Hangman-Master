@@ -1,0 +1,6 @@
+{
+  "name": "Hangman",
+  "description": "A notebook-style tablet-friendly Hangman game.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
