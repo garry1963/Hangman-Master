@@ -319,16 +319,16 @@ function ClassicGame() {
           <select 
             value={selectedCategory} 
             onChange={e => setSelectedCategory(e.target.value)} 
-            className="flex-1 bg-transparent border-none text-sm font-medium text-slate-700 outline-none cursor-pointer focus:ring-0 p-2 truncate"
+            className="flex-1 min-w-0 bg-transparent border-none text-sm font-medium text-slate-700 outline-none cursor-pointer focus:ring-0 p-1 sm:p-2 truncate"
           >
             <option value="any">⭐ All Categories</option>
             {Object.keys(categories).map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-          <div className="w-[1px] bg-slate-200 mx-1"></div>
+          <div className="w-[1px] bg-slate-200 mx-1 shrink-0"></div>
           <select 
             value={difficulty} 
             onChange={e => setDifficulty(e.target.value as Difficulty)} 
-            className="flex-1 bg-transparent border-none text-sm font-medium text-slate-700 outline-none cursor-pointer focus:ring-0 p-2 truncate"
+            className="flex-1 min-w-0 bg-transparent border-none text-sm font-medium text-slate-700 outline-none cursor-pointer focus:ring-0 p-1 sm:p-2 truncate"
           >
             <option value="any">⚡ Any Level</option>
             <option value="easy">🟢 Easy (≤5)</option>
@@ -558,7 +558,7 @@ function ManageWords() {
       </div>
       
       <div className="mt-8 text-center text-sm font-medium text-slate-400 bg-white p-4 rounded-xl border border-slate-200 border-dashed">
-        Database Sync: <span className="text-slate-700">{Object.values(categories).reduce((acc, arr) => acc + arr.length, 0)}</span> words active across <span className="text-slate-700">{categoryKeys.length}</span> categories.
+        Database Sync: <span className="text-slate-700">{(Object.values(categories) as string[][]).reduce((acc, arr) => acc + arr.length, 0)}</span> words active across <span className="text-slate-700">{categoryKeys.length}</span> categories.
       </div>
     </div>
   )
