@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import confetti from "canvas-confetti";
-import { getRandomWordByConfig, getClassicStreak, saveClassicStreak, getLocalCategories, addCategory, addWords, checkDailyStreak, getDailyState, saveDailyState, DailyState, Difficulty } from "./lib/store";
+import { getRandomWordByConfig, getClassicStreak, saveClassicStreak, getLocalCategories, addCategory, addWords, checkDailyStreak, getDailyState, saveDailyState, DailyState, Difficulty, getDifficulty } from "./lib/store";
 import { generateDailyPuzzle } from "./lib/ai";
 import { HangmanDrawing } from "./components/HangmanDrawing";
 import { Keyboard } from "./components/Keyboard";
@@ -73,11 +73,12 @@ interface GameBoardProps {
   resetGame?: () => void;
   hideReset?: boolean;
   controls?: React.ReactNode;
+  infoNode?: React.ReactNode;
 }
 
 function GameBoard({ 
   word, category, label, guessedLetters, setGuessedLetters, 
-  streak, showStreak, resetGame, onWin, onLose, hideReset, controls 
+  streak, showStreak, resetGame, onWin, onLose, hideReset, controls, infoNode
 }: GameBoardProps) {
   const wordChars = word.split("");
   const activeLetters = new Set(Array.from(guessedLetters).filter(l => wordChars.includes(l)));
@@ -129,6 +130,14 @@ function GameBoard({
     return () => document.removeEventListener("keypress", handler);
   }, [addGuessedLetter]);
 
+  const provideHint = useCallback(() => {
+    const unrevealed = wordChars.filter(c => c !== " " && !guessedLetters.has(c));
+    if (unrevealed.length > 0) {
+      const hintLetter = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+      addGuessedLetter(hintLetter);
+    }
+  }, [wordChars, guessedLetters, addGuessedLetter]);
+
   return (
     <main className="flex-1 flex flex-col md:flex-row gap-6 md:gap-8 p-4 md:p-8 max-w-6xl mx-auto w-full md:overflow-visible overflow-y-auto">
       {/* Left Side: Gallows/Drawing Area */}
@@ -158,10 +167,13 @@ function GameBoard({
           <HangmanDrawing mistakes={mistakes} />
         </div>
 
-        <p className="md:mt-auto mt-4 text-slate-500 font-medium italic text-center w-full px-2 max-w-sm bg-slate-50 p-4 rounded-xl border border-slate-100 shadow-inner">
-          <span className="uppercase text-xs tracking-wider font-bold not-italic font-sans text-slate-400 block mb-1">{label}</span>
-          <span className="text-indigo-700 not-italic font-semibold text-lg">{category}</span>
-        </p>
+        <div className="md:mt-auto mt-4 mb-20 md:mb-24 w-full flex flex-col items-center gap-3 relative z-20">
+          <p className="text-slate-500 font-medium italic text-center w-full px-2 max-w-sm bg-slate-50 p-4 rounded-xl border border-slate-100 shadow-inner">
+            <span className="uppercase text-xs tracking-wider font-bold not-italic font-sans text-slate-400 block mb-1">{label}</span>
+            <span className="text-indigo-700 not-italic font-semibold text-lg">{category}</span>
+          </p>
+          {infoNode}
+        </div>
       </section>
 
       {/* Right Side: Interaction Area */}
@@ -171,31 +183,34 @@ function GameBoard({
           {/* Subtle background decoration */}
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-50 rounded-full blur-3xl opacity-50"></div>
           
-          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 z-10">
-            {wordChars.map((letter, index) => {
-              if (letter === " ") return <div key={index} className="w-4 sm:w-6" />;
-              const isRevealed = guessedLetters.has(letter) || isLoser;
-              const isMissed = isLoser && !guessedLetters.has(letter);
-              
-              return (
-                <div 
-                  key={index} 
-                  className={`
-                    w-[8vw] h-[12vw] max-w-[48px] max-h-[64px] sm:w-12 sm:h-16 
-                    border-b-[3px] sm:border-b-4 ${isRevealed ? 'border-indigo-600' : 'border-slate-300'}
-                    flex items-center justify-center 
-                    text-3xl sm:text-4xl font-black
-                    ${isMissed ? "text-red-500" : "text-slate-800"}
-                    transition-all duration-300 ease-out
-                    bg-slate-50/50 rounded-t-sm
-                  `}
-                >
-                  <span className={`${isRevealed ? "opacity-100" : "opacity-0"} transition-opacity duration-300 block transform -translate-y-1`}>
-                    {isRevealed ? letter : ""}
-                  </span>
-                </div>
-              );
-            })}
+          <div className="flex flex-wrap items-center justify-center z-10 w-full">
+            {word.split(" ").map((wordPart, wordIndex) => (
+              <div key={wordIndex} className="flex flex-nowrap items-center gap-1 sm:gap-2 mx-1 sm:mx-2 mb-3">
+                {wordPart.split("").map((letter, index) => {
+                  const isRevealed = guessedLetters.has(letter) || isLoser;
+                  const isMissed = isLoser && !guessedLetters.has(letter);
+                  
+                  return (
+                    <div 
+                      key={`${wordIndex}-${index}`} 
+                      className={`
+                        w-[7vw] h-[10vw] max-w-[40px] max-h-[56px] sm:w-11 sm:h-14 
+                        border-b-[3px] sm:border-b-4 ${isRevealed ? 'border-indigo-600' : 'border-slate-300'}
+                        flex items-center justify-center 
+                        text-2xl sm:text-3xl font-black
+                        ${isMissed ? "text-red-500" : "text-slate-800"}
+                        transition-all duration-300 ease-out
+                        bg-slate-50/50 rounded-t-sm
+                      `}
+                    >
+                      <span className={`${isRevealed ? "opacity-100" : "opacity-0"} transition-opacity duration-300 block transform -translate-y-1`}>
+                        {isRevealed ? letter : ""}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
           </div>
           <div className="text-sm text-slate-500 font-medium z-10">
             {(isWinner || isLoser) ? (
@@ -203,7 +218,7 @@ function GameBoard({
                 {isWinner ? "Survival Master!" : "Game Over"}
               </span>
             ) : (
-              `Guess the ${wordChars.filter(c => c !== " ").length}-letter word`
+              `${word.includes(" ") ? `${word.split(" ").length}-word phrase` : "Single word"} • ${wordChars.filter(c => c !== " ").length} letters`
             )}
           </div>
         </div>
@@ -217,8 +232,8 @@ function GameBoard({
         />
 
         {/* Action Buttons */}
-        {(!hideReset) && (
-          <div className="flex gap-4 mt-auto">
+        <div className="flex gap-4 mt-auto w-full">
+          {(!hideReset) && (
             <button
               onClick={resetGame}
               className={`flex-1 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg transition-all flex items-center justify-center gap-2 ${
@@ -230,8 +245,17 @@ function GameBoard({
               <RotateCw className={`w-5 h-5 ${(isWinner || isLoser) ? 'animate-spin-once' : ''}`} />
               {(isWinner || isLoser) ? "Play Again" : "Skip Word"}
             </button>
-          </div>
-        )}
+          )}
+
+          {!(isWinner || isLoser) && (
+            <button
+              onClick={provideHint}
+              className={`flex-1 py-3 sm:py-4 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 rounded-xl font-bold text-base sm:text-lg shadow-sm transition-all active:bg-slate-100 flex items-center justify-center gap-2 ${hideReset ? 'w-full' : ''}`}
+            >
+              Get Hint
+            </button>
+          )}
+        </div>
       </section>
     </main>
   );
@@ -266,12 +290,20 @@ function ClassicGame() {
   return (
     <GameBoard 
       word={wordData.word} 
-      category={wordData.category} 
+      category="Can you guess the word?" 
       guessedLetters={guessedLetters}
       setGuessedLetters={setGuessedLetters}
       streak={streak}
       showStreak={true}
-      label="Category"
+      label="Classic Mode"
+      infoNode={
+        wordData.word !== 'LOADING' && (
+          <div className="flex gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md border border-indigo-100">{wordData.category}</span>
+            <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded-md border border-amber-100">Diff: {getDifficulty(wordData.word)}</span>
+          </div>
+        )
+      }
       resetGame={resetGame}
       onWin={() => {
         const newStreak = streak + 1;
@@ -332,6 +364,8 @@ function DailyGame() {
             puzzleDate: today,
             puzzleWord: aiData.word.toUpperCase(),
             puzzleHint: aiData.hint,
+            puzzleCategory: aiData.category,
+            puzzleDifficulty: aiData.difficulty,
           };
           setDailyState(newState);
           saveDailyState(newState);
@@ -406,6 +440,14 @@ function DailyGame() {
          word={dailyState.puzzleWord}
          category={dailyState.puzzleHint || "AI Puzzle Mystery"}
          label="Trivia Hint"
+         infoNode={
+           (dailyState.puzzleCategory || dailyState.puzzleDifficulty) && (
+             <div className="flex gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+               {dailyState.puzzleCategory && <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md border border-indigo-100">{dailyState.puzzleCategory}</span>}
+               {dailyState.puzzleDifficulty && <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded-md border border-amber-100">Diff: {dailyState.puzzleDifficulty}</span>}
+             </div>
+           )
+         }
          guessedLetters={guessedLetters}
          setGuessedLetters={setGuessedLetters}
          streak={dailyState.streak}

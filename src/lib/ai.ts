@@ -21,10 +21,10 @@ export async function generateDailyPuzzle() {
     contents: `Generate a trivia puzzle for a game of hangman. 
     The difficulty should be randomly selected.
     Return ONLY a JSON object with this exact structure: 
-    { "word": "ANSWER", "hint": "Trivia question...", "difficulty": "easy" | "medium" | "hard" }
-    The answer MUST be a single word, NO spaces, only uppercase letters (regex: ^[A-Z]+$).
+    { "word": "ANSWER", "hint": "Trivia question...", "difficulty": "easy" | "medium" | "hard", "category": "category string" }
+    The answer can be a single word or a phrase with spaces. Only uppercase letters and spaces are allowed.
     The hint should be fun and descriptive.
-    Example: { "word": "EGYPT", "hint": "Home to the ancient Pyramids of Giza.", "difficulty": "easy" }`,
+    Example: { "word": "GRAND CANYON", "hint": "A deep gorge carved by the Colorado River.", "difficulty": "easy", "category": "Geography" }`,
     config: {
       responseMimeType: "application/json",
       responseSchema: {
@@ -32,9 +32,10 @@ export async function generateDailyPuzzle() {
         properties: {
           word: { type: Type.STRING },
           hint: { type: Type.STRING },
-          difficulty: { type: Type.STRING }
+          difficulty: { type: Type.STRING },
+          category: { type: Type.STRING }
         },
-        required: ["word", "hint", "difficulty"]
+        required: ["word", "hint", "difficulty", "category"]
       }
     }
   });

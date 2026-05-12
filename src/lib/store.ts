@@ -83,6 +83,8 @@ export interface DailyState {
   puzzleWord: string | null;
   puzzleHint: string | null;
   puzzleDate: string | null;
+  puzzleDifficulty?: string | null;
+  puzzleCategory?: string | null;
 }
 
 export function getDailyState(): DailyState {
