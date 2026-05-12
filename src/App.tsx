@@ -183,9 +183,9 @@ function GameBoard({
           {/* Subtle background decoration */}
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-50 rounded-full blur-3xl opacity-50"></div>
           
-          <div className="flex flex-wrap items-center justify-center z-10 w-full">
+          <div className="flex flex-wrap items-center justify-center z-10 w-full gap-y-3 sm:gap-y-4">
             {word.split(" ").map((wordPart, wordIndex) => (
-              <div key={wordIndex} className="flex flex-nowrap items-center gap-1 sm:gap-2 mx-1 sm:mx-2 mb-3">
+              <div key={wordIndex} className="flex flex-nowrap justify-center gap-0.5 sm:gap-1.5 md:gap-2 mx-1 sm:mx-2 mb-1 max-w-full">
                 {wordPart.split("").map((letter, index) => {
                   const isRevealed = guessedLetters.has(letter) || isLoser;
                   const isMissed = isLoser && !guessedLetters.has(letter);
@@ -194,16 +194,16 @@ function GameBoard({
                     <div 
                       key={`${wordIndex}-${index}`} 
                       className={`
-                        w-[7vw] h-[10vw] max-w-[40px] max-h-[56px] sm:w-11 sm:h-14 
+                        w-6 sm:w-8 md:w-11 h-9 sm:h-11 md:h-14 
                         border-b-[3px] sm:border-b-4 ${isRevealed ? 'border-indigo-600' : 'border-slate-300'}
-                        flex items-center justify-center 
-                        text-2xl sm:text-3xl font-black
+                        flex items-center justify-center overflow-hidden
+                        text-lg sm:text-xl md:text-3xl font-black shrink min-w-[20px] sm:min-w-[24px]
                         ${isMissed ? "text-red-500" : "text-slate-800"}
                         transition-all duration-300 ease-out
                         bg-slate-50/50 rounded-t-sm
                       `}
                     >
-                      <span className={`${isRevealed ? "opacity-100" : "opacity-0"} transition-opacity duration-300 block transform -translate-y-1`}>
+                      <span className={`${isRevealed ? "opacity-100" : "opacity-0"} transition-opacity duration-300 block transform -translate-y-0.5 sm:-translate-y-1`}>
                         {isRevealed ? letter : ""}
                       </span>
                     </div>

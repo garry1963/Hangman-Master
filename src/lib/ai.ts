@@ -17,7 +17,7 @@ export async function generateDailyPuzzle() {
   if (!genai) throw new Error("Gemini API key is not configured.");
 
   const response = await genai.models.generateContent({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.1-flash-lite',
     contents: `Generate a trivia puzzle for a game of hangman. 
     The difficulty should be randomly selected.
     Return ONLY a JSON object with this exact structure: 
