@@ -40,6 +40,26 @@ export function addWords(category: string, words: string[]) {
   saveLocalCategories(cats);
 }
 
+export function getHistoricalDailyWords(): string[] {
+  const stored = localStorage.getItem('hangman_daily_history');
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch { }
+  }
+  return [];
+}
+
+export function addHistoricalDailyWord(word: string) {
+  const history = getHistoricalDailyWords();
+  const cleanWord = word.trim().toUpperCase();
+  if (!history.includes(cleanWord)) {
+    history.push(cleanWord);
+    if (history.length > 500) history.shift();
+    localStorage.setItem('hangman_daily_history', JSON.stringify(history));
+  }
+}
+
 export interface DifficultyStats {
   easy: number;
   medium: number;

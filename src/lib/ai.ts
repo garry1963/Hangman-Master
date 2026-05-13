@@ -1,5 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
+import { getHistoricalDailyWords } from "./store";
+
 let ai: GoogleGenAI | null = null;
 
 export function getAI() {
@@ -16,10 +18,15 @@ export async function generateDailyPuzzle() {
   const genai = getAI();
   if (!genai) throw new Error("Gemini API key is not configured.");
 
+  const history = getHistoricalDailyWords();
+  const historyPrompt = history.length > 0 
+    ? `\nIMPORTANT: You must NOT generate any of these previously used words: ${history.join(', ')}`
+    : '';
+
   const response = await genai.models.generateContent({
     model: 'gemini-3.1-flash-lite',
     contents: `Generate a trivia puzzle for a game of hangman. 
-    The difficulty should be randomly selected.
+    The difficulty should be randomly selected.${historyPrompt}
     Return ONLY a JSON object with this exact structure: 
     { "word": "ANSWER", "hint": "Trivia question...", "difficulty": "easy" | "medium" | "hard", "category": "category string" }
     The answer can be a single word or a phrase with spaces. Only uppercase letters and spaces are allowed.

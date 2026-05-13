@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import confetti from "canvas-confetti";
-import { getRandomWordByConfig, getClassicStreak, saveClassicStreak, getLocalCategories, addCategory, addWords, checkDailyStreak, getDailyState, saveDailyState, DailyState, Difficulty, getDifficulty } from "./lib/store";
+import { getRandomWordByConfig, getClassicStreak, saveClassicStreak, getLocalCategories, addCategory, addWords, checkDailyStreak, getDailyState, saveDailyState, DailyState, Difficulty, getDifficulty, addHistoricalDailyWord } from "./lib/store";
 import { generateDailyPuzzle } from "./lib/ai";
 import { HangmanDrawing } from "./components/HangmanDrawing";
 import { Keyboard } from "./components/Keyboard";
@@ -359,6 +359,7 @@ function DailyGame() {
         setLoading(true);
         try {
           const aiData = await generateDailyPuzzle();
+          addHistoricalDailyWord(aiData.word);
           const newState: DailyState = {
             ...dailyState,
             puzzleDate: today,
