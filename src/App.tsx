@@ -439,13 +439,12 @@ function DailyGame() {
        </div>
        <GameBoard 
          word={dailyState.puzzleWord}
-         category={dailyState.puzzleHint || "AI Puzzle Mystery"}
-         label="Trivia Hint"
+         category={dailyState.puzzleCategory || "AI Puzzle Mystery"}
+         label="Category"
          infoNode={
-           (dailyState.puzzleCategory || dailyState.puzzleDifficulty) && (
+           dailyState.puzzleDifficulty && (
              <div className="flex gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-               {dailyState.puzzleCategory && <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md border border-indigo-100">{dailyState.puzzleCategory}</span>}
-               {dailyState.puzzleDifficulty && <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded-md border border-amber-100">Diff: {dailyState.puzzleDifficulty}</span>}
+               <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded-md border border-amber-100">Diff: {dailyState.puzzleDifficulty}</span>
              </div>
            )
          }
