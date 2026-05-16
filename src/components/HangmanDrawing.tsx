@@ -28,18 +28,18 @@ export function HangmanDrawing({ mistakes }: HangmanDrawingProps) {
         className={cn("w-full h-full stroke-[6] stroke-linecap-round fill-none", strokeClass)}
       >
         {/* === Gallows (Always visible) === */}
-        <motion.g initial="hidden" animate="visible">
+        <g>
           {/* Base */}
-          <motion.line variants={draw} x1="20" y1="300" x2="160" y2="300" className="opacity-80" />
+          <line x1="20" y1="300" x2="160" y2="300" className="opacity-80" />
           {/* Main Pole */}
-          <motion.line variants={draw} x1="90" y1="300" x2="90" y2="20" className="opacity-80" />
+          <line x1="90" y1="300" x2="90" y2="20" className="opacity-80" />
           {/* Top Arm */}
-          <motion.line variants={draw} x1="90" y1="20" x2="180" y2="20" className="opacity-80" />
+          <line x1="90" y1="20" x2="180" y2="20" className="opacity-80" />
           {/* Support Diagonal */}
-          <motion.line variants={draw} x1="90" y1="60" x2="130" y2="20" className="opacity-80" />
+          <line x1="90" y1="60" x2="130" y2="20" className="opacity-80" />
           {/* Rope */}
-          <motion.line variants={draw} x1="180" y1="20" x2="180" y2="60" className="stroke-[4] opacity-50" />
-        </motion.g>
+          <line x1="180" y1="20" x2="180" y2="60" className="stroke-[4] opacity-50" />
+        </g>
 
         {/* === Body Parts === */}
         <AnimatePresence>
