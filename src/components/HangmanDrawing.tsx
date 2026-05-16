@@ -1,4 +1,3 @@
-import { cn } from "../lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 
 interface HangmanDrawingProps {
@@ -18,27 +17,30 @@ const draw = {
 };
 
 export function HangmanDrawing({ mistakes }: HangmanDrawingProps) {
-  const strokeClass = "stroke-slate-800";
-
   return (
-    <div className="relative w-full max-w-[220px] aspect-[3/4] mx-auto flex items-center justify-center">
+    <div className="relative w-full max-w-[220px] aspect-[3/4] mx-auto flex items-center justify-center text-slate-800">
       {/* SVG Canvas */}
       <svg 
         viewBox="0 0 240 320" 
-        className={cn("w-full h-full stroke-[6] stroke-linecap-round fill-none", strokeClass)}
+        stroke="currentColor"
+        strokeWidth="6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+        className="w-full h-full"
       >
         {/* === Gallows (Always visible) === */}
-        <g>
+        <g className="opacity-80">
           {/* Base */}
-          <line x1="20" y1="300" x2="160" y2="300" className="opacity-80" />
+          <line x1="20" y1="300" x2="160" y2="300" />
           {/* Main Pole */}
-          <line x1="90" y1="300" x2="90" y2="20" className="opacity-80" />
+          <line x1="90" y1="300" x2="90" y2="20" />
           {/* Top Arm */}
-          <line x1="90" y1="20" x2="180" y2="20" className="opacity-80" />
+          <line x1="90" y1="20" x2="180" y2="20" />
           {/* Support Diagonal */}
-          <line x1="90" y1="60" x2="130" y2="20" className="opacity-80" />
+          <line x1="90" y1="60" x2="130" y2="20" />
           {/* Rope */}
-          <line x1="180" y1="20" x2="180" y2="60" className="stroke-[4] opacity-50" />
+          <line x1="180" y1="20" x2="180" y2="60" strokeWidth="4" className="opacity-50" />
         </g>
 
         {/* === Body Parts === */}
