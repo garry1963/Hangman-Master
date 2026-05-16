@@ -163,7 +163,7 @@ function GameBoard({
           </div>
         )}
         
-        <div className="w-full max-w-[240px] flex items-center justify-center mt-12 md:mt-0 mb-6 md:mb-12">
+        <div className="w-full max-w-[240px] flex items-center justify-center mt-16 md:mt-16 mb-6 md:mb-12">
           <HangmanDrawing mistakes={mistakes} />
         </div>
 

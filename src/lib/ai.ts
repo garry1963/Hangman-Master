@@ -26,13 +26,15 @@ export async function generateDailyPuzzle() {
   const response = await genai.models.generateContent({
     model: 'gemini-3.1-flash-lite',
     contents: `Generate a trivia puzzle for a game of hangman. 
-    The difficulty should be randomly selected.${historyPrompt}
+    The difficulty should be randomly selected. Pick a completely random topic (e.g. Science, Movies, History, Pop Culture, etc.).
+    Random Seed: ${Math.random()}${historyPrompt}
     Return ONLY a JSON object with this exact structure: 
     { "word": "ANSWER", "hint": "Trivia question...", "difficulty": "easy" | "medium" | "hard", "category": "category string" }
     The answer can be a single word or a phrase with spaces. Only uppercase letters and spaces are allowed.
     The hint should be fun and descriptive.
     Example: { "word": "GRAND CANYON", "hint": "A deep gorge carved by the Colorado River.", "difficulty": "easy", "category": "Geography" }`,
     config: {
+      temperature: 0.9,
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
