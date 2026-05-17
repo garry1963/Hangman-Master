@@ -26,18 +26,29 @@ export function addCategory(name: string) {
   }
 }
 
-export function addWords(category: string, words: string[]) {
+export function addWords(category: string, words: string[]): { added: number; skipped: number } {
   const cats = getLocalCategories();
   if (!cats[category]) cats[category] = [];
   
-  const current = new Set(cats[category].map(w => w.toUpperCase()));
+  const existingWords = new Set(cats[category].map(w => w.toUpperCase()));
+  let added = 0;
+  let skipped = 0;
+
   words.forEach(w => {
     const clean = w.trim().toUpperCase();
-    if (clean) current.add(clean);
+    if (clean) {
+      if (existingWords.has(clean)) {
+        skipped++;
+      } else {
+        existingWords.add(clean);
+        added++;
+      }
+    }
   });
   
-  cats[category] = Array.from(current);
+  cats[category] = Array.from(existingWords);
   saveLocalCategories(cats);
+  return { added, skipped };
 }
 
 export function getHistoricalDailyWords(): string[] {

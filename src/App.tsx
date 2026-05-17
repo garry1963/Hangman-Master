@@ -481,11 +481,16 @@ function ManageWords() {
 
   const handleAddWords = () => {
     if (!selectedCat || !wordsToAdd.trim()) return;
-    const words = wordsToAdd.split(',').map(w => w.trim()).filter(w => w.match(/^[a-zA-Z]+$/));
-    addWords(selectedCat, words);
+    const words = wordsToAdd.split(',').map(w => w.trim().toUpperCase().replace(/\s+/g, ' ')).filter(w => w.match(/^[A-Z\s]+$/) && w.length > 0);
+    const result = addWords(selectedCat, words);
     setWordsToAdd("");
     setCategories(getLocalCategories());
-    alert(`Successfully added ${words.length} valid word(s) to ${selectedCat}!`);
+    
+    let msg = `Added ${result.added} items to ${selectedCat}.`;
+    if (result.skipped > 0) {
+      msg += `\nSkipped ${result.skipped} duplicates.`;
+    }
+    alert(msg);
   };
 
   return (
