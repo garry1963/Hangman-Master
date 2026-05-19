@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from "react";
 import confetti from "canvas-confetti";
-import { getRandomWordByConfig, getClassicStreak, saveClassicStreak, getLocalCategories, addCategory, addWords, checkDailyStreak, getDailyState, saveDailyState, DailyState, Difficulty, getDifficulty, addHistoricalDailyWord } from "./lib/store";
+import { getRandomWordByConfig, getClassicStreak, saveClassicStreak, getLocalCategories, addCategory, addWords, checkDailyStreak, getDailyState, saveDailyState, DailyState, Difficulty, getDifficulty, addHistoricalDailyWord, exportAppData, importAppData } from "./lib/store";
 import { generateDailyPuzzle } from "./lib/ai";
 import { HangmanDrawing } from "./components/HangmanDrawing";
 import { Keyboard } from "./components/Keyboard";
-import { Trophy, RotateCw, Calendar, Settings, Gamepad2, Plus, Upload, Loader2, RefreshCw } from "lucide-react";
+import { Trophy, RotateCw, Calendar, Settings, Gamepad2, Plus, Upload, Loader2, RefreshCw, Download, Database } from "lucide-react";
 
 type ViewMode = 'classic' | 'daily' | 'manage';
 
@@ -493,6 +493,37 @@ function ManageWords() {
     alert(msg);
   };
 
+  const handleExport = () => {
+    const data = exportAppData();
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const date = new Date().toISOString().split('T')[0];
+    a.href = url;
+    a.download = `hangman-backup-${date}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (importAppData(content)) {
+        alert("Restore successful! The app will now reload.");
+        window.location.reload();
+      } else {
+        alert("Invalid backup file. Please try again.");
+      }
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div className="flex-1 p-6 md:p-8 max-w-3xl mx-auto w-full">
       <div className="mb-8">
@@ -559,6 +590,45 @@ function ManageWords() {
           >
             Add Words
           </button>
+        </div>
+
+        {/* Backup & Restore */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 md:col-span-2">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
+              <Database className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-800">Backup & Restore</h3>
+              <p className="text-xs text-slate-400">Export or import your entire library and app settings.</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4">
+            <button 
+              onClick={handleExport}
+              className="flex-1 bg-white border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 group"
+            >
+              <Download className="w-5 h-5 text-slate-400 group-hover:text-slate-600" />
+              Download Backup (.json)
+            </button>
+            
+            <label className="flex-1 cursor-pointer">
+              <div className="h-full bg-white border-2 border-dashed border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 text-slate-600 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 group">
+                <Upload className="w-5 h-5 text-slate-400 group-hover:text-indigo-500" />
+                Restore from File
+              </div>
+              <input 
+                type="file" 
+                accept=".json" 
+                className="hidden" 
+                onChange={handleImport}
+              />
+            </label>
+          </div>
+          <p className="text-[10px] text-slate-400 mt-4 text-center uppercase tracking-widest font-bold">
+            All current data will be overwritten when restoring.
+          </p>
         </div>
       </div>
       

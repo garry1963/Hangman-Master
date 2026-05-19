@@ -160,3 +160,29 @@ export function getClassicStreak(): number {
 export function saveClassicStreak(streak: number) {
   localStorage.setItem('hangman_classic_streak', streak.toString());
 }
+
+export function exportAppData(): string {
+  const data = {
+    categories: localStorage.getItem('hangman_categories'),
+    history: localStorage.getItem('hangman_daily_history'),
+    daily: localStorage.getItem('hangman_daily'),
+    streak: localStorage.getItem('hangman_classic_streak'),
+    version: '1.0',
+    exportDate: new Date().toISOString()
+  };
+  return JSON.stringify(data);
+}
+
+export function importAppData(jsonData: string): boolean {
+  try {
+    const data = JSON.parse(jsonData);
+    if (data.categories) localStorage.setItem('hangman_categories', data.categories);
+    if (data.history) localStorage.setItem('hangman_daily_history', data.history);
+    if (data.daily) localStorage.setItem('hangman_daily', data.daily);
+    if (data.streak) localStorage.setItem('hangman_classic_streak', data.streak);
+    return true;
+  } catch (e) {
+    console.error("Import error:", e);
+    return false;
+  }
+}
