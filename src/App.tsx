@@ -4,16 +4,42 @@ import { getRandomWordByConfig, getClassicStreak, saveClassicStreak, getLocalCat
 import { generateDailyPuzzle } from "./lib/ai";
 import { HangmanDrawing } from "./components/HangmanDrawing";
 import { Keyboard } from "./components/Keyboard";
-import { Trophy, RotateCw, Calendar, Settings, Gamepad2, Plus, Upload, Loader2, RefreshCw, Download, Database } from "lucide-react";
+import { ChallengesView } from "./components/ChallengesView";
+import { recordGameWin, recordCorrectLetterGuess, getUnclaimedCount } from "./lib/challenges";
+import { Trophy, RotateCw, Calendar, Settings, Gamepad2, Plus, Upload, Loader2, RefreshCw, Download, Database, Lightbulb, Target, Sparkles, X } from "lucide-react";
 
-type ViewMode = 'classic' | 'daily' | 'manage';
+type ViewMode = 'classic' | 'daily' | 'challenges' | 'manage';
 
 export default function App() {
   const [view, setView] = useState<ViewMode>('classic');
+  const [toastChallenge, setToastChallenge] = useState<string | null>(null);
+
+  const unclaimedCount = getUnclaimedCount();
+
+  const handleChallengeUnlocked = (title: string) => {
+    setToastChallenge(title);
+    setTimeout(() => {
+      setToastChallenge(null);
+    }, 4500);
+  };
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 flex flex-col font-sans overflow-x-hidden">
+    <div className="w-full min-h-screen bg-slate-50 flex flex-col font-sans overflow-x-hidden relative">
       
+      {/* Toast Notification for Completed Challenges */}
+      {toastChallenge && (
+        <div className="fixed top-20 right-4 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-indigo-500/30 flex items-center gap-3 animate-bounce-subtle">
+          <Sparkles className="w-5 h-5 text-amber-400 shrink-0" />
+          <div>
+            <div className="text-[10px] font-extrabold text-amber-400 uppercase tracking-wider">Challenge Completed!</div>
+            <div className="text-sm font-bold text-white">{toastChallenge}</div>
+          </div>
+          <button onClick={() => setToastChallenge(null)} className="ml-3 text-slate-400 hover:text-white p-1">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Top Navigation */}
       <nav className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-8 shrink-0 relative z-10 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
         <div className="flex items-center gap-4">
@@ -22,7 +48,7 @@ export default function App() {
           </div>
           <span className="hidden sm:inline text-xl font-bold text-slate-800 tracking-tight">Hangman Master</span>
         </div>
-        <div className="flex gap-1 md:gap-4 overflow-x-auto pb-1 sm:pb-0">
+        <div className="flex gap-1 md:gap-3 overflow-x-auto pb-1 sm:pb-0">
           <button 
             onClick={() => setView('classic')} 
             className={`px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${view === 'classic' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-600 hover:bg-slate-100'}`}
@@ -36,6 +62,18 @@ export default function App() {
             <Calendar className="w-4 h-4" /> <span className="hidden xs:inline">Daily Puzzle</span>
           </button>
           <button 
+            onClick={() => setView('challenges')} 
+            className={`px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center gap-2 whitespace-nowrap relative ${view === 'challenges' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-600 hover:bg-slate-100'}`}
+          >
+            <Target className="w-4 h-4" /> 
+            <span className="hidden xs:inline">Challenges</span>
+            {unclaimedCount > 0 && (
+              <span className="w-5 h-5 bg-amber-500 text-white font-bold text-[10px] rounded-full flex items-center justify-center shadow-xs animate-pulse">
+                {unclaimedCount}
+              </span>
+            )}
+          </button>
+          <button 
             onClick={() => setView('manage')} 
             className={`px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${view === 'manage' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-600 hover:bg-slate-100'}`}
           >
@@ -45,8 +83,9 @@ export default function App() {
       </nav>
 
       <div className="flex-1 flex flex-col items-center">
-        {view === 'classic' && <ClassicGame />}
-        {view === 'daily' && <DailyGame />}
+        {view === 'classic' && <ClassicGame onChallengeUnlocked={handleChallengeUnlocked} />}
+        {view === 'daily' && <DailyGame onChallengeUnlocked={handleChallengeUnlocked} />}
+        {view === 'challenges' && <ChallengesView />}
         {view === 'manage' && <ManageWords />}
       </div>
 
@@ -68,8 +107,8 @@ interface GameBoardProps {
   setGuessedLetters: React.Dispatch<React.SetStateAction<Set<string>>>;
   streak: number;
   showStreak: boolean;
-  onWin?: () => void;
-  onLose?: () => void;
+  onWin?: (details: { hintsUsed: number; mistakes: number }) => void;
+  onLose?: (details: { hintsUsed: number; mistakes: number }) => void;
   resetGame?: () => void;
   hideReset?: boolean;
   controls?: React.ReactNode;
@@ -89,6 +128,23 @@ function GameBoard({
   const isWinner = wordChars.every(letter => guessedLetters.has(letter) || letter === " ");
 
   const [gameOverHandled, setGameOverHandled] = useState(false);
+  const [hintsUsed, setHintsUsed] = useState(0);
+
+  // Calculate unique unrevealed letters remaining in secret word
+  const uniqueUnrevealed = Array.from(
+    new Set(wordChars.filter(c => c !== " " && !guessedLetters.has(c)))
+  );
+  const unrevealedCount = uniqueUnrevealed.length;
+
+  // Can use hint if less than 2 hints used AND more than 1 letter remains
+  const canGetHint = hintsUsed < 2 && unrevealedCount > 1 && !isWinner && !isLoser;
+
+  // Reset hints used when starting a new game
+  useEffect(() => {
+    if (guessedLetters.size === 0) {
+      setHintsUsed(0);
+    }
+  }, [word, guessedLetters.size]);
 
   const addGuessedLetter = useCallback(
     (letter: string) => {
@@ -96,10 +152,13 @@ function GameBoard({
       setGuessedLetters(prev => {
         const newSet = new Set(prev);
         newSet.add(letter);
+        if (wordChars.includes(letter)) {
+          recordCorrectLetterGuess();
+        }
         return newSet;
       });
     },
-    [guessedLetters, isWinner, isLoser, setGuessedLetters]
+    [guessedLetters, isWinner, isLoser, setGuessedLetters, wordChars]
   );
 
   useEffect(() => {
@@ -110,13 +169,13 @@ function GameBoard({
   useEffect(() => {
     if (isWinner && !gameOverHandled) {
       confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#22c55e', '#3b82f6', '#eab308'] });
-      onWin?.();
+      onWin?.({ hintsUsed, mistakes });
       setGameOverHandled(true);
     } else if (isLoser && !gameOverHandled) {
-      onLose?.();
+      onLose?.({ hintsUsed, mistakes });
       setGameOverHandled(true);
     }
-  }, [isWinner, isLoser, gameOverHandled, onWin, onLose]);
+  }, [isWinner, isLoser, gameOverHandled, onWin, onLose, hintsUsed, mistakes]);
 
   // Physical keyboard support
   useEffect(() => {
@@ -131,12 +190,13 @@ function GameBoard({
   }, [addGuessedLetter]);
 
   const provideHint = useCallback(() => {
-    const unrevealed = wordChars.filter(c => c !== " " && !guessedLetters.has(c));
-    if (unrevealed.length > 0) {
-      const hintLetter = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+    if (!canGetHint) return;
+    const hintLetter = uniqueUnrevealed[Math.floor(Math.random() * uniqueUnrevealed.length)];
+    if (hintLetter) {
       addGuessedLetter(hintLetter);
+      setHintsUsed(prev => prev + 1);
     }
-  }, [wordChars, guessedLetters, addGuessedLetter]);
+  }, [canGetHint, uniqueUnrevealed, addGuessedLetter]);
 
   return (
     <main className="flex-1 flex flex-col md:flex-row gap-6 md:gap-8 p-4 md:p-8 max-w-6xl mx-auto w-full md:overflow-visible overflow-y-auto">
@@ -250,9 +310,28 @@ function GameBoard({
           {!(isWinner || isLoser) && (
             <button
               onClick={provideHint}
-              className={`flex-1 py-3 sm:py-4 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 rounded-xl font-bold text-base sm:text-lg shadow-sm transition-all active:bg-slate-100 flex items-center justify-center gap-2 ${hideReset ? 'w-full' : ''}`}
+              disabled={!canGetHint}
+              title={
+                hintsUsed >= 2 
+                  ? "Maximum 2 hints allowed per game" 
+                  : unrevealedCount <= 1 
+                  ? "No hint available when only 1 letter is remaining" 
+                  : "Reveal a random missing letter"
+              }
+              className={`flex-1 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg shadow-sm transition-all flex items-center justify-center gap-2 ${hideReset ? 'w-full' : ''} ${
+                canGetHint
+                  ? "bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 active:bg-slate-100"
+                  : "bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed opacity-80"
+              }`}
             >
-              Get Hint
+              <Lightbulb className={`w-5 h-5 ${canGetHint ? 'text-amber-500 fill-amber-100' : 'text-slate-400'}`} />
+              <span>
+                {hintsUsed >= 2 
+                  ? "Max Hints (2/2)" 
+                  : unrevealedCount <= 1 
+                  ? "1 Letter Left (No Hint)" 
+                  : `Get Hint (${2 - hintsUsed} left)`}
+              </span>
             </button>
           )}
         </div>
@@ -264,7 +343,7 @@ function GameBoard({
 // ----------------------------------------------------------------------
 // Classic Game View
 // ----------------------------------------------------------------------
-function ClassicGame() {
+function ClassicGame({ onChallengeUnlocked }: { onChallengeUnlocked?: (title: string) => void }) {
   const [difficulty, setDifficulty] = useState<Difficulty>('any');
   const [selectedCategory, setSelectedCategory] = useState<string>('any');
   const categories = getLocalCategories();
@@ -285,7 +364,7 @@ function ClassicGame() {
 
   useEffect(() => {
     resetGame();
-  }, [resetGame]); // Re-run when difficulty or category changes
+  }, [resetGame]);
 
   return (
     <GameBoard 
@@ -305,10 +384,23 @@ function ClassicGame() {
         )
       }
       resetGame={resetGame}
-      onWin={() => {
+      onWin={({ hintsUsed, mistakes }) => {
         const newStreak = streak + 1;
         setStreak(newStreak);
         saveClassicStreak(newStreak);
+
+        const newlyCompleted = recordGameWin({
+          mode: 'classic',
+          mistakes,
+          hintsUsed,
+          category: wordData.category,
+          difficulty: getDifficulty(wordData.word),
+          streak: newStreak
+        });
+
+        if (newlyCompleted.length > 0) {
+          onChallengeUnlocked?.(newlyCompleted[0]);
+        }
       }}
       onLose={() => {
         setStreak(0);
@@ -344,7 +436,7 @@ function ClassicGame() {
 // ----------------------------------------------------------------------
 // Daily Game View
 // ----------------------------------------------------------------------
-function DailyGame() {
+function DailyGame({ onChallengeUnlocked }: { onChallengeUnlocked?: (title: string) => void }) {
   const [dailyState, setDailyState] = useState<DailyState>(() => checkDailyStreak());
   const [guessedLetters, setGuessedLetters] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -382,12 +474,27 @@ function DailyGame() {
     loadPuzzle();
   }, [today, dailyState, isAlreadyPlayedToday]);
 
-  const handleWin = () => {
+  const handleWin = ({ hintsUsed, mistakes }: { hintsUsed: number; mistakes: number }) => {
      if (isAlreadyPlayedToday) return;
-     const newState = { ...dailyState, lastCompletedDate: today, streak: dailyState.streak + 1 };
+     const newStreak = dailyState.streak + 1;
+     const newState = { ...dailyState, lastCompletedDate: today, streak: newStreak };
      setDailyState(newState);
      saveDailyState(newState);
+
+     const newlyCompleted = recordGameWin({
+       mode: 'daily',
+       mistakes,
+       hintsUsed,
+       category: dailyState.puzzleCategory || 'AI Daily',
+       difficulty: dailyState.puzzleDifficulty || 'medium',
+       streak: newStreak
+     });
+
+     if (newlyCompleted.length > 0) {
+       onChallengeUnlocked?.(newlyCompleted[0]);
+     }
   };
+
   const handleLose = () => {
      if (isAlreadyPlayedToday) return;
      const newState = { ...dailyState, lastCompletedDate: today, streak: 0 };
@@ -527,66 +634,69 @@ function ManageWords() {
   return (
     <div className="flex-1 p-6 md:p-8 max-w-3xl mx-auto w-full">
       <div className="mb-8">
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-800">Word Library</h2>
-        <p className="text-slate-500 mt-2">Manage your offline database of categories and words.</p>
+        <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Manage Puzzle Library</h2>
+        <p className="text-slate-500 text-sm">Add custom categories and words/phrases to play in Classic mode.</p>
       </div>
-      
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
-              <Plus className="w-5 h-5" />
-            </div>
-            <div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Add Category */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+                <Plus className="w-5 h-5" />
+              </div>
               <h3 className="text-lg font-bold text-slate-800">Add Category</h3>
-              <p className="text-xs text-slate-400">Create a new topic bucket.</p>
             </div>
+            <p className="text-xs text-slate-500 mb-4">Create a new category name (e.g. MOVIES, GEOGRAPHY).</p>
+            <input 
+              type="text" 
+              placeholder="CATEGORY NAME" 
+              value={newCatName} 
+              onChange={e => setNewCatName(e.target.value)} 
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 mb-4"
+            />
           </div>
-          <div className="flex flex-col gap-3 mt-auto">
-             <input 
-               className="border border-slate-300 p-3 rounded-xl w-full text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-shadow bg-slate-50 uppercase placeholder:normal-case font-medium text-slate-700" 
-               placeholder="E.g. SPORTS" 
-               value={newCatName} 
-               onChange={e => setNewCatName(e.target.value)} 
-               onKeyDown={e => e.key === 'Enter' && handleAddCat()}
-             />
-             <button 
-               className="bg-slate-800 hover:bg-slate-900 text-white p-3 rounded-xl font-bold text-sm transition-colors shadow-sm active:translate-y-[1px]" 
-               onClick={handleAddCat}
-             >
-               Create Category
-             </button>
-          </div>
+          <button 
+            onClick={handleAddCat}
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-bold text-sm transition-all shadow-sm"
+          >
+            Create Category
+          </button>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center">
-              <Upload className="w-5 h-5" />
+        {/* Add Words */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+                <Upload className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-800">Add Words & Phrases</h3>
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-slate-800">Upload Words</h3>
-              <p className="text-xs text-slate-400">Add words to a specific category.</p>
+            <div className="mb-3">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Target Category</label>
+              <select 
+                value={selectedCat} 
+                onChange={e => setSelectedCat(e.target.value)}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"
+              >
+                {categoryKeys.map(c => <option key={c} value={c}>{c} ({categories[c]?.length || 0} words)</option>)}
+              </select>
+            </div>
+            <div className="mb-4">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Words or Phrases (comma separated)</label>
+              <textarea 
+                placeholder="APPLE, BANANA, GRAND CANYON" 
+                value={wordsToAdd} 
+                onChange={e => setWordsToAdd(e.target.value)} 
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 h-20 uppercase resize-none"
+              />
             </div>
           </div>
-          
-          <select 
-            className="border border-slate-300 p-3 rounded-xl mb-3 w-full text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50 font-medium text-slate-700 font-sans" 
-            value={selectedCat} 
-            onChange={e => setSelectedCat(e.target.value)}
-          >
-            {categoryKeys.map(c => <option key={c} value={c}>{c} ({categories[c].length})</option>)}
-          </select>
-          <textarea 
-            className="border border-slate-300 p-3 rounded-xl w-full mb-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50 font-mono text-slate-600 resize-none" 
-            rows={4} 
-            placeholder="Comma separated words (e.g. APPLE, BANANA)" 
-            value={wordsToAdd} 
-            onChange={e => setWordsToAdd(e.target.value)} 
-          />
           <button 
-            className="bg-indigo-600 hover:bg-indigo-700 text-white w-full py-3 rounded-xl font-bold text-sm transition-colors shadow-sm active:translate-y-[1px]" 
             onClick={handleAddWords}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold text-sm transition-all shadow-sm"
           >
             Add Words
           </button>
@@ -636,5 +746,6 @@ function ManageWords() {
         Database Sync: <span className="text-slate-700">{(Object.values(categories) as string[][]).reduce((acc, arr) => acc + arr.length, 0)}</span> words active across <span className="text-slate-700">{categoryKeys.length}</span> categories.
       </div>
     </div>
-  )
+  );
 }
+

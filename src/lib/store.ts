@@ -167,6 +167,7 @@ export function exportAppData(): string {
     history: localStorage.getItem('hangman_daily_history'),
     daily: localStorage.getItem('hangman_daily'),
     streak: localStorage.getItem('hangman_classic_streak'),
+    challenges: localStorage.getItem('hangman_challenges'),
     version: '1.0',
     exportDate: new Date().toISOString()
   };
@@ -180,6 +181,7 @@ export function importAppData(jsonData: string): boolean {
     if (data.history) localStorage.setItem('hangman_daily_history', data.history);
     if (data.daily) localStorage.setItem('hangman_daily', data.daily);
     if (data.streak) localStorage.setItem('hangman_classic_streak', data.streak);
+    if (data.challenges) localStorage.setItem('hangman_challenges', data.challenges);
     return true;
   } catch (e) {
     console.error("Import error:", e);
