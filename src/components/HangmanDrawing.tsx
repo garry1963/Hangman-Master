@@ -10,7 +10,7 @@ const draw = {
     pathLength: 1,
     opacity: 1,
     transition: {
-      pathLength: { type: "spring", duration: 1.5, bounce: 0 },
+      pathLength: { type: "spring", duration: 1.2, bounce: 0 },
       opacity: { duration: 0.01 }
     }
   }
@@ -29,64 +29,86 @@ export function HangmanDrawing({ mistakes }: HangmanDrawingProps) {
         fill="none"
         className="w-full h-full"
       >
-        {/* === Gallows (Always visible) === */}
-        <g className="opacity-80">
-          {/* Base */}
-          <line x1="20" y1="300" x2="160" y2="300" />
-          {/* Main Pole */}
-          <line x1="90" y1="300" x2="90" y2="20" />
-          {/* Top Arm */}
-          <line x1="90" y1="20" x2="180" y2="20" />
-          {/* Support Diagonal */}
-          <line x1="90" y1="60" x2="130" y2="20" />
-          {/* Rope */}
-          <line x1="180" y1="20" x2="180" y2="60" strokeWidth="4" className="opacity-50" />
-        </g>
+        {/* Subtle ground baseline guide */}
+        <line x1="10" y1="300" x2="230" y2="300" strokeDasharray="4 6" className="stroke-slate-200" strokeWidth="2" />
 
-        {/* === Body Parts === */}
+        {/* === Gallows Construction (Mistakes 1 - 4) === */}
         <AnimatePresence>
-          {/* 1. Head */}
+          {/* 1. Gallows Base */}
           {mistakes >= 1 && (
+            <motion.line 
+              variants={draw} initial="hidden" animate="visible"
+              x1="20" y1="300" x2="160" y2="300" 
+            />
+          )}
+
+          {/* 2. Main Pole */}
+          {mistakes >= 2 && (
+            <motion.line 
+              variants={draw} initial="hidden" animate="visible"
+              x1="90" y1="300" x2="90" y2="20" 
+            />
+          )}
+
+          {/* 3. Top Arm & Diagonal Support */}
+          {mistakes >= 3 && (
+            <motion.g variants={draw} initial="hidden" animate="visible">
+              <line x1="90" y1="20" x2="180" y2="20" />
+              <line x1="90" y1="60" x2="130" y2="20" />
+            </motion.g>
+          )}
+
+          {/* 4. Rope */}
+          {mistakes >= 4 && (
+            <motion.line 
+              variants={draw} initial="hidden" animate="visible"
+              x1="180" y1="20" x2="180" y2="60" strokeWidth="4" className="opacity-70"
+            />
+          )}
+
+          {/* === Man Construction (Mistakes 5 - 10) === */}
+          {/* 5. Head */}
+          {mistakes >= 5 && (
             <motion.circle 
               variants={draw} initial="hidden" animate="visible"
               cx="180" cy="90" r="30" 
             />
           )}
           
-          {/* 2. Body */}
-          {mistakes >= 2 && (
+          {/* 6. Body */}
+          {mistakes >= 6 && (
             <motion.line 
               variants={draw} initial="hidden" animate="visible"
               x1="180" y1="120" x2="180" y2="200" 
             />
           )}
           
-          {/* 3. Left Arm */}
-          {mistakes >= 3 && (
+          {/* 7. Left Arm */}
+          {mistakes >= 7 && (
             <motion.line 
               variants={draw} initial="hidden" animate="visible"
               x1="180" y1="140" x2="140" y2="180" 
             />
           )}
           
-          {/* 4. Right Arm */}
-          {mistakes >= 4 && (
+          {/* 8. Right Arm */}
+          {mistakes >= 8 && (
             <motion.line 
               variants={draw} initial="hidden" animate="visible"
               x1="180" y1="140" x2="220" y2="180" 
             />
           )}
           
-          {/* 5. Left Leg */}
-          {mistakes >= 5 && (
+          {/* 9. Left Leg */}
+          {mistakes >= 9 && (
             <motion.line 
               variants={draw} initial="hidden" animate="visible"
               x1="180" y1="200" x2="140" y2="260" 
             />
           )}
           
-          {/* 6. Right Leg */}
-          {mistakes >= 6 && (
+          {/* 10. Right Leg */}
+          {mistakes >= 10 && (
             <motion.line 
               variants={draw} initial="hidden" animate="visible"
               x1="180" y1="200" x2="220" y2="260" 
@@ -94,7 +116,7 @@ export function HangmanDrawing({ mistakes }: HangmanDrawingProps) {
           )}
           
           {/* Dead Eyes (Replaces normal head if lost) */}
-          {mistakes >= 6 && (
+          {mistakes >= 10 && (
             <motion.g 
               initial={{ opacity: 0, scale: 0.5 }} 
               animate={{ opacity: 1, scale: 1 }} 

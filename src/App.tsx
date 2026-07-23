@@ -124,7 +124,7 @@ function GameBoard({
   const inactiveLetters = new Set(Array.from(guessedLetters).filter(l => !wordChars.includes(l)));
   const mistakes = inactiveLetters.size;
 
-  const isLoser = mistakes >= 6;
+  const isLoser = mistakes >= 10;
   const isWinner = wordChars.every(letter => guessedLetters.has(letter) || letter === " ");
 
   const [gameOverHandled, setGameOverHandled] = useState(false);
@@ -204,7 +204,7 @@ function GameBoard({
       <section className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center relative p-6 md:p-8 min-h-[300px] h-full self-start">
         <div className="absolute top-4 left-4 md:top-6 md:left-6 flex items-center gap-2">
           <span className="px-3 py-1 bg-amber-50 text-amber-700 text-xs font-bold rounded-full border border-amber-100">
-            {6 - mistakes} CHANCES LEFT
+            {Math.max(0, 10 - mistakes)} CHANCES LEFT
           </span>
         </div>
         
