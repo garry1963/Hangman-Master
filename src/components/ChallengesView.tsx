@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import confetti from 'canvas-confetti';
 import { 
   Trophy, Calendar, Award, ShieldCheck, Zap, Type, 
   Flame, Grid, TrendingUp, Sparkles, CheckCircle2, Clock, Star 
 } from 'lucide-react';
 import { 
   DAILY_CHALLENGES, WEEKLY_CHALLENGES, Challenge, 
-  getChallengeState, claimChallengeReward, getRankDetails 
+  getChallengeState, getRankDetails 
 } from '../lib/challenges';
 
 const ICON_MAP: Record<string, React.ReactNode> = {
@@ -27,6 +26,11 @@ export function ChallengesView() {
   const [state, setState] = useState(() => getChallengeState());
   const [dailyTimeLeft, setDailyTimeLeft] = useState('');
   const [weeklyTimeLeft, setWeeklyTimeLeft] = useState('');
+
+  // Always sync state on mount and tab change
+  useEffect(() => {
+    setState(getChallengeState());
+  }, [activeTab]);
 
   // Update timers
   useEffect(() => {
@@ -61,19 +65,6 @@ export function ChallengesView() {
   const rank = getRankDetails(state.totalXp);
   const challenges = activeTab === 'daily' ? DAILY_CHALLENGES : WEEKLY_CHALLENGES;
 
-  const handleClaim = (id: string) => {
-    const xpEarned = claimChallengeReward(id);
-    if (xpEarned > 0) {
-      confetti({
-        particleCount: 80,
-        spread: 60,
-        origin: { y: 0.7 },
-        colors: ['#eab308', '#6366f1', '#10b981']
-      });
-      setState(getChallengeState());
-    }
-  };
-
   // XP Progress math
   const xpInCurrentLevel = state.totalXp;
   const xpNeededForNext = rank.nextXp;
@@ -82,7 +73,7 @@ export function ChallengesView() {
   return (
     <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full">
       {/* Level / Rank Summary Card */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 md:p-8 shadow-xl mb-8 border border-indigo-500/20 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 md:p-8 shadow-xl mb-6 border border-indigo-500/20 relative overflow-hidden">
         {/* Background ambient light */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -z-0 pointer-events-none" />
         
@@ -99,7 +90,7 @@ export function ChallengesView() {
                 <span className="text-slate-400 text-xs font-semibold">Rank Title</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">{rank.title}</h2>
-              <p className="text-slate-400 text-xs sm:text-sm mt-1">Complete challenges to earn XP and level up!</p>
+              <p className="text-slate-400 text-xs sm:text-sm mt-1">XP rewards auto-collect instantly upon completion!</p>
             </div>
           </div>
 
@@ -121,6 +112,14 @@ export function ChallengesView() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Auto-Collect Banner */}
+      <div className="bg-emerald-50 border border-emerald-200/80 rounded-2xl p-4 mb-6 flex items-center gap-3 text-emerald-900 text-xs sm:text-sm font-semibold shadow-2xs">
+        <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+          <Sparkles className="w-4 h-4 text-emerald-600" />
+        </div>
+        <span><strong>Auto Collect Active:</strong> Challenge XP rewards are automatically claimed and added to your level progress as soon as you meet the target!</span>
       </div>
 
       {/* Challenge Category Selector */}
@@ -161,7 +160,7 @@ export function ChallengesView() {
         {challenges.map((c: Challenge) => {
           const currentProgress = state.progress[c.id] || 0;
           const isCompleted = currentProgress >= c.target;
-          const isClaimed = !!state.claimed[c.id];
+          const isClaimed = !!state.claimed[c.id] || isCompleted;
           const percent = Math.min(100, Math.round((currentProgress / c.target) * 100));
 
           return (
@@ -169,17 +168,13 @@ export function ChallengesView() {
               key={c.id} 
               className={`bg-white rounded-2xl p-5 border shadow-2xs transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
                 isClaimed 
-                  ? 'border-slate-200 bg-slate-50/60 opacity-80' 
-                  : isCompleted 
-                  ? 'border-emerald-300 ring-2 ring-emerald-500/20 bg-emerald-50/20' 
+                  ? 'border-emerald-200 bg-emerald-50/30' 
                   : 'border-slate-200 hover:border-slate-300'
               }`}
             >
               <div className="flex items-start gap-4 flex-1 min-w-0 w-full sm:w-auto">
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
                   isClaimed 
-                    ? 'bg-slate-200/70 text-slate-500' 
-                    : isCompleted 
                     ? 'bg-emerald-100 text-emerald-700' 
                     : 'bg-indigo-50 text-indigo-600'
                 }`}>
@@ -200,7 +195,7 @@ export function ChallengesView() {
                     <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60">
                       <div 
                         className={`h-full rounded-full transition-all duration-300 ${
-                          isCompleted ? 'bg-emerald-500' : 'bg-indigo-600'
+                          isClaimed ? 'bg-emerald-500' : 'bg-indigo-600'
                         }`}
                         style={{ width: `${percent}%` }}
                       />
@@ -212,21 +207,13 @@ export function ChallengesView() {
                 </div>
               </div>
 
-              {/* Action Button */}
+              {/* Status Badge */}
               <div className="w-full sm:w-auto shrink-0 flex justify-end">
                 {isClaimed ? (
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 bg-slate-200/60 px-4 py-2.5 rounded-xl border border-slate-200 w-full sm:w-auto justify-center">
-                    <CheckCircle2 className="w-4 h-4 text-slate-500" />
-                    <span>Claimed</span>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-100/80 px-4 py-2.5 rounded-xl border border-emerald-200/80 w-full sm:w-auto justify-center">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>Auto-Collected (+{c.rewardXp} XP)</span>
                   </div>
-                ) : isCompleted ? (
-                  <button
-                    onClick={() => handleClaim(c.id)}
-                    className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-sm px-5 py-2.5 rounded-xl shadow-md shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 animate-bounce-subtle"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    <span>Claim +{c.rewardXp} XP</span>
-                  </button>
                 ) : (
                   <div className="text-xs font-semibold text-slate-400 bg-slate-100 px-3.5 py-2 rounded-xl border border-slate-200/60 text-center w-full sm:w-auto">
                     In Progress

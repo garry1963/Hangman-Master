@@ -129,6 +129,37 @@ export function getWeeklyKey(): string {
   return `${d.getFullYear()}-W${weekNo.toString().padStart(2, '0')}`;
 }
 
+export interface AutoClaimedChallenge {
+  id: string;
+  title: string;
+  rewardXp: number;
+}
+
+export function autoCollectRewards(state: ChallengeState): AutoClaimedChallenge[] {
+  const newlyClaimed: AutoClaimedChallenge[] = [];
+  let stateChanged = false;
+
+  ALL_CHALLENGES.forEach(c => {
+    const prog = state.progress[c.id] || 0;
+    if (prog >= c.target && !state.claimed[c.id]) {
+      state.claimed[c.id] = true;
+      state.totalXp += c.rewardXp;
+      newlyClaimed.push({
+        id: c.id,
+        title: c.title,
+        rewardXp: c.rewardXp
+      });
+      stateChanged = true;
+    }
+  });
+
+  if (stateChanged) {
+    saveChallengeState(state);
+  }
+
+  return newlyClaimed;
+}
+
 export function getChallengeState(): ChallengeState {
   const stored = localStorage.getItem('hangman_challenges');
   const today = getTodayKey();
@@ -176,6 +207,9 @@ export function getChallengeState(): ChallengeState {
     saveChallengeState(state);
   }
 
+  // Automatically collect any pending completed rewards
+  autoCollectRewards(state);
+
   return state;
 }
 
@@ -192,32 +226,21 @@ export interface GameWinEvent {
   streak: number;
 }
 
-export function recordGameWin(event: GameWinEvent): string[] {
+export function recordGameWin(event: GameWinEvent): AutoClaimedChallenge[] {
   const state = getChallengeState();
-  const newlyCompleted: string[] = [];
 
   const updateProgress = (id: string, amountToAdd: number) => {
     const challenge = ALL_CHALLENGES.find(c => c.id === id);
     if (!challenge) return;
     const current = state.progress[id] || 0;
-    const updated = current + amountToAdd;
-    state.progress[id] = updated;
-
-    if (current < challenge.target && updated >= challenge.target) {
-      newlyCompleted.push(challenge.title);
-    }
+    state.progress[id] = current + amountToAdd;
   };
 
   const setProgressMax = (id: string, value: number) => {
     const challenge = ALL_CHALLENGES.find(c => c.id === id);
     if (!challenge) return;
     const current = state.progress[id] || 0;
-    const updated = Math.max(current, value);
-    state.progress[id] = updated;
-
-    if (current < challenge.target && updated >= challenge.target) {
-      newlyCompleted.push(challenge.title);
-    }
+    state.progress[id] = Math.max(current, value);
   };
 
   // 1. Overall wins
@@ -257,18 +280,22 @@ export function recordGameWin(event: GameWinEvent): string[] {
   setProgressMax('w_categories', state.categoriesWonThisWeek.length);
 
   saveChallengeState(state);
-  return newlyCompleted;
+
+  // Auto collect XP rewards for newly completed challenges
+  return autoCollectRewards(state);
 }
 
-export function recordCorrectLetterGuess() {
+export function recordCorrectLetterGuess(): AutoClaimedChallenge[] {
   const state = getChallengeState();
   const id = 'd_guess_letters';
   const challenge = DAILY_CHALLENGES.find(c => c.id === id);
-  if (!challenge) return;
+  if (!challenge) return [];
 
   const current = state.progress[id] || 0;
   state.progress[id] = current + 1;
   saveChallengeState(state);
+
+  return autoCollectRewards(state);
 }
 
 export function claimChallengeReward(id: string): number {

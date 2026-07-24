@@ -5,19 +5,17 @@ import { generateDailyPuzzle } from "./lib/ai";
 import { HangmanDrawing } from "./components/HangmanDrawing";
 import { Keyboard } from "./components/Keyboard";
 import { ChallengesView } from "./components/ChallengesView";
-import { recordGameWin, recordCorrectLetterGuess, getUnclaimedCount } from "./lib/challenges";
+import { recordGameWin, recordCorrectLetterGuess, AutoClaimedChallenge } from "./lib/challenges";
 import { Trophy, RotateCw, Calendar, Settings, Gamepad2, Plus, Upload, Loader2, RefreshCw, Download, Database, Lightbulb, Target, Sparkles, X } from "lucide-react";
 
 type ViewMode = 'classic' | 'daily' | 'challenges' | 'manage';
 
 export default function App() {
   const [view, setView] = useState<ViewMode>('classic');
-  const [toastChallenge, setToastChallenge] = useState<string | null>(null);
+  const [toastChallenge, setToastChallenge] = useState<{ title: string; rewardXp: number } | null>(null);
 
-  const unclaimedCount = getUnclaimedCount();
-
-  const handleChallengeUnlocked = (title: string) => {
-    setToastChallenge(title);
+  const handleChallengeUnlocked = (challenge: { title: string; rewardXp: number }) => {
+    setToastChallenge(challenge);
     setTimeout(() => {
       setToastChallenge(null);
     }, 4500);
@@ -28,13 +26,20 @@ export default function App() {
       
       {/* Toast Notification for Completed Challenges */}
       {toastChallenge && (
-        <div className="fixed top-20 right-4 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-indigo-500/30 flex items-center gap-3 animate-bounce-subtle">
-          <Sparkles className="w-5 h-5 text-amber-400 shrink-0" />
-          <div>
-            <div className="text-[10px] font-extrabold text-amber-400 uppercase tracking-wider">Challenge Completed!</div>
-            <div className="text-sm font-bold text-white">{toastChallenge}</div>
+        <div className="fixed top-20 right-4 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-indigo-500/30 flex items-center gap-3.5 animate-bounce-subtle">
+          <div className="w-9 h-9 bg-amber-500/20 border border-amber-400/40 rounded-xl flex items-center justify-center shrink-0">
+            <Sparkles className="w-5 h-5 text-amber-400" />
           </div>
-          <button onClick={() => setToastChallenge(null)} className="ml-3 text-slate-400 hover:text-white p-1">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-extrabold text-amber-400 uppercase tracking-wider">Challenge Completed!</span>
+              <span className="text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.2 rounded-md">
+                +{toastChallenge.rewardXp} XP Auto-Collected
+              </span>
+            </div>
+            <div className="text-sm font-bold text-white mt-0.5">{toastChallenge.title}</div>
+          </div>
+          <button onClick={() => setToastChallenge(null)} className="ml-2 text-slate-400 hover:text-white p-1">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -67,11 +72,6 @@ export default function App() {
           >
             <Target className="w-4 h-4" /> 
             <span className="hidden xs:inline">Challenges</span>
-            {unclaimedCount > 0 && (
-              <span className="w-5 h-5 bg-amber-500 text-white font-bold text-[10px] rounded-full flex items-center justify-center shadow-xs animate-pulse">
-                {unclaimedCount}
-              </span>
-            )}
           </button>
           <button 
             onClick={() => setView('manage')} 
@@ -109,6 +109,7 @@ interface GameBoardProps {
   showStreak: boolean;
   onWin?: (details: { hintsUsed: number; mistakes: number }) => void;
   onLose?: (details: { hintsUsed: number; mistakes: number }) => void;
+  onChallengeUnlocked?: (challenge: AutoClaimedChallenge) => void;
   resetGame?: () => void;
   hideReset?: boolean;
   controls?: React.ReactNode;
@@ -117,7 +118,7 @@ interface GameBoardProps {
 
 function GameBoard({ 
   word, category, label, guessedLetters, setGuessedLetters, 
-  streak, showStreak, resetGame, onWin, onLose, hideReset, controls, infoNode
+  streak, showStreak, resetGame, onWin, onLose, onChallengeUnlocked, hideReset, controls, infoNode
 }: GameBoardProps) {
   const wordChars = word.split("");
   const activeLetters = new Set(Array.from(guessedLetters).filter(l => wordChars.includes(l)));
@@ -153,12 +154,15 @@ function GameBoard({
         const newSet = new Set(prev);
         newSet.add(letter);
         if (wordChars.includes(letter)) {
-          recordCorrectLetterGuess();
+          const newlyClaimed = recordCorrectLetterGuess();
+          if (newlyClaimed && newlyClaimed.length > 0) {
+            newlyClaimed.forEach(item => onChallengeUnlocked?.(item));
+          }
         }
         return newSet;
       });
     },
-    [guessedLetters, isWinner, isLoser, setGuessedLetters, wordChars]
+    [guessedLetters, isWinner, isLoser, setGuessedLetters, wordChars, onChallengeUnlocked]
   );
 
   useEffect(() => {
@@ -343,7 +347,7 @@ function GameBoard({
 // ----------------------------------------------------------------------
 // Classic Game View
 // ----------------------------------------------------------------------
-function ClassicGame({ onChallengeUnlocked }: { onChallengeUnlocked?: (title: string) => void }) {
+function ClassicGame({ onChallengeUnlocked }: { onChallengeUnlocked?: (challenge: AutoClaimedChallenge) => void }) {
   const [difficulty, setDifficulty] = useState<Difficulty>('any');
   const [selectedCategory, setSelectedCategory] = useState<string>('any');
   const categories = getLocalCategories();
@@ -375,6 +379,7 @@ function ClassicGame({ onChallengeUnlocked }: { onChallengeUnlocked?: (title: st
       streak={streak}
       showStreak={true}
       label="Classic Mode"
+      onChallengeUnlocked={onChallengeUnlocked}
       infoNode={
         wordData.word !== 'LOADING' && (
           <div className="flex gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -399,7 +404,7 @@ function ClassicGame({ onChallengeUnlocked }: { onChallengeUnlocked?: (title: st
         });
 
         if (newlyCompleted.length > 0) {
-          onChallengeUnlocked?.(newlyCompleted[0]);
+          newlyCompleted.forEach(item => onChallengeUnlocked?.(item));
         }
       }}
       onLose={() => {
@@ -436,7 +441,7 @@ function ClassicGame({ onChallengeUnlocked }: { onChallengeUnlocked?: (title: st
 // ----------------------------------------------------------------------
 // Daily Game View
 // ----------------------------------------------------------------------
-function DailyGame({ onChallengeUnlocked }: { onChallengeUnlocked?: (title: string) => void }) {
+function DailyGame({ onChallengeUnlocked }: { onChallengeUnlocked?: (challenge: AutoClaimedChallenge) => void }) {
   const [dailyState, setDailyState] = useState<DailyState>(() => checkDailyStreak());
   const [guessedLetters, setGuessedLetters] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -491,7 +496,7 @@ function DailyGame({ onChallengeUnlocked }: { onChallengeUnlocked?: (title: stri
      });
 
      if (newlyCompleted.length > 0) {
-       onChallengeUnlocked?.(newlyCompleted[0]);
+       newlyCompleted.forEach(item => onChallengeUnlocked?.(item));
      }
   };
 
